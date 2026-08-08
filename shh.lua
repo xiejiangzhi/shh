@@ -30,12 +30,14 @@ function SH:set(t)
   if not t then
     self:clear()
   elseif type(t) == 'table' and type(t[1]) == 'table' then
+    assert(#t == 9, 'Table length should be 9 or 27')
     for i = 1, 9 do
       self[i][1] = t[i][1]
       self[i][2] = t[i][2]
       self[i][3] = t[i][3]
     end
   elseif type(t) == 'table' and type(t[1]) == 'number' then
+    assert(#t == 27, 'Table length should be 9 or 27')
     for i = 1, 9 do
       local b = (i - 1) * 3
       self[i][1] = t[b + 1]

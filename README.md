@@ -114,7 +114,7 @@ Example:
 ```lua
 local pass = lovr.graphics.newPass()
 local skybox = lovr.graphics.newTexture('skybox.hdr', { usage = 'storage' })
-local buffer = lovr.graphics.newBuffer('vec4', 9)
+local buffer = lovr.graphics.newBuffer({ 'vec3', layout = 'std430' }, 9)
 shh.compute(pass, skybox, buffer)
 lovr.graphics.submit(pass)
 SH = shh.new(buffer:getData())
@@ -138,8 +138,8 @@ Like `shh.new`, the texture should be a cubemap or an equirectangular texture.  
 > Tip: You can pass a texture view to this function to compute spherical harmonics from a smaller
 > mipmap level of a cubemap.  This usually gives roughly the same results but is much faster.
 
-The buffer should use the `vec4` format or the `vec3` format with the `std140` layout.  144 bytes
-will be written to the buffer.
+The buffer should use the `vec4` format or the `vec3` format with the `std140` or `std430` layout.
+144 bytes will be written to the buffer.
 
 The buffer can be used directly in a shader, or, after submitting the pass, the coefficients can be
 read back to the CPU using `Buffer:getData`.  Sending the buffer directly to a shader will avoid any
