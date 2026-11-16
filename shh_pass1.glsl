@@ -3,6 +3,8 @@
 #define RGBA32F 2
 #define RG11B10F 3
 
+layout(local_size_x = 16, local_size_y = 16) in;
+
 layout(constant_id = 0) const uint FORMAT = RGBA32F;
 
 layout(rgba8) uniform readonly image2D TextureRGBA8;
@@ -10,10 +12,11 @@ layout(rgba16f) uniform readonly image2D TextureRGBA16F;
 layout(rgba32f) uniform readonly image2D TextureRGBA32F;
 layout(r11f_g11f_b10f) uniform readonly image2D TextureRG11B10F;
 
-// layout(std140) buffer writeonly Basis { vec3 basis[9]; };
+#extension GL_EXT_shader_atomic_float: require
+layout(std140) buffer writeonly Basis { vec3 basis[9]; };
 layout(std140) buffer writeonly ResultBlock { vec3 OutResult[]; };
 
-layout(local_size_x = 16, local_size_y = 16) in;
+uniform float Scale;
 
 shared vec3 result[256][9];
 
@@ -80,10 +83,17 @@ void lovrmain() {
       }
     }
 
-    uint gid = WorkgroupID.x + WorkgroupID.y * WorkgroupCount.x;
-    uint gidx = gid * 9u;
+    // uint gid = WorkgroupID.x + WorkgroupID.y * WorkgroupCount.x;
+    // uint gidx = gid * 9u;
     for (uint i = 0; i < 9; i++) {
-      OutResult[gidx + i] = result[0][i];
+      // OutResult[gidx + i] = result[0][i];
+
+      // atomicAdd(basis[i].x, 0.10001);
+      // atomicAdd(basis[i].y, 0.10001);
+      // atomicAdd(basis[i].z, 0.10001);
+      atomicAdd(basis[i].x, result[0][i].x * Scale);
+      atomicAdd(basis[i].y, result[0][i].y * Scale);
+      atomicAdd(basis[i].z, result[0][i].z * Scale);
     }
   }
 }

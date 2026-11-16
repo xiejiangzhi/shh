@@ -4,7 +4,7 @@ skybox = lovr.graphics.newTexture('assets/industrial_workshop_foundry_2k.hdr', {
   usage = { 'storage', 'sample' }
 })
 shh_tex = lovr.graphics.newTextureView(skybox, {
-  mipmap = 3
+  mipmap = 1
 })
 
 local DefaultColors = {}
@@ -16,6 +16,8 @@ print('Coefficients:')
 for i, color in ipairs(colors) do
   print(i, ('% 6f % 6f % 6f'):format(unpack(color)))
 end
+
+colors:set(DefaultColors)
 
 local tempPass = lovr.graphics.newPass()
 local tempBuffer = lovr.graphics.newBuffer({ 'vec3', layout = 'std140' }, 9)
@@ -41,24 +43,30 @@ local totalAngle = 2.0 * PI * PI / tex_h * (1.0 / math.tan(PI / (2.0 * tex_h)))
 local tempBuffer2 = lovr.graphics.newBuffer({ 'vec3', layout = 'std140' }, shh_x * shh_y * 9)
 
 local function compute_shh2(tex, n)
+  tempBuffer:clear()
+
   tempPass:push('state')
 
   tempPass:setShader(shhShaderPass)
   tempPass:send('Texture' .. tex:getFormat():upper(), tex)
   tempPass:send('ResultBlock', tempBuffer2)
+  tempPass:send('Scale', 4. * PI / totalAngle)
+  tempPass:send('Basis', tempBuffer)
   tempPass:compute(shh_x, shh_y)
 
-  tempPass:barrier()
-  tempPass:setShader(shhShaderPass2)
-  tempPass:send('ResultBlock', tempBuffer2)
-  tempPass:send('Basis', tempBuffer)
-  tempPass:send('Scale', 4. * PI / totalAngle)
-  tempPass:compute(1)
+  -- tempPass:barrier()
+  -- tempPass:setShader(shhShaderPass2)
+  -- tempPass:send('ResultBlock', tempBuffer2)
+  -- tempPass:send('Basis', tempBuffer)
+  -- tempPass:send('Scale', 4. * PI / totalAngle)
+  -- tempPass:compute(1)
 
   tempPass:pop('state')
 end
 
 local mode = 2
+
+lovr.graphics.setTimingEnabled(true)
 
 function lovr.draw(pass)
   if readback and readback:isComplete() then
@@ -67,6 +75,7 @@ function lovr.draw(pass)
     readback = nil
   end
 
+  local stats = tempPass:getStats()
   local tpass
   if not readback then
     tempPass:reset()
@@ -77,7 +86,6 @@ function lovr.draw(pass)
     else
       compute_shh2(shh_tex)
     end
-    readback = tempBuffer:newReadback()
   end
 
   pass:skybox(skybox)
@@ -85,9 +93,19 @@ function lovr.draw(pass)
   pass:sphere(0, 1.7, -2)
   local fps = lovr.timer.getFPS()
   pass:setShader()
-  pass:text("mode: "..mode..", FPS: "..fps, { 0, 4, -4 })
+  pass:text(
+    "mode: "..mode..", FPS: "..fps..', stats: '
+      ..string.format("cpu:%.6f, gpu: %.6f", stats.submitTime, stats.gpuTime),
+    { 0, 4, -4 }
+  )
 
   lovr.graphics.submit(tpass, pass)
+
+  if not readback then
+    readback = tempBuffer:newReadback()
+  end
+
+  return true
 end
 
 function lovr.keypressed(key)
